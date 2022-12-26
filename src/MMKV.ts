@@ -64,6 +64,10 @@ interface MMKVInterface {
    * @default undefined
    */
   getString: (key: string) => string | undefined;
+
+  getStringAsync: (key: string) => Promise<string>;
+
+  getStringWithCallback: (key: string, callback: (val: string) => void) => void;
   /**
    * Get the number value for the given `key`, or `undefined` if it does not exist.
    *
@@ -125,6 +129,8 @@ export type NativeMMKV = Pick<
   | 'getBuffer'
   | 'set'
   | 'recrypt'
+  | 'getStringWithCallback'
+  | 'getStringAsync'
 >;
 
 const onValueChangedListeners = new Map<string, ((key: string) => void)[]>();
@@ -189,6 +195,16 @@ export class MMKV implements MMKVInterface {
     const func = this.getFunctionFromCache('getString');
     return func(key);
   }
+  getStringWithCallback(key: string, callback: (val: string) => void): void {
+    const func = this.getFunctionFromCache('getStringWithCallback');
+    func(key, callback);
+  }
+
+  getStringAsync(key: string): Promise<string> {
+    const func = this.getFunctionFromCache('getStringAsync');
+    return func(key);
+  }
+
   getNumber(key: string): number | undefined {
     const func = this.getFunctionFromCache('getNumber');
     return func(key);
