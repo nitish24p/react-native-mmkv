@@ -42,6 +42,20 @@ export const createMMKV = (config: MMKVConfiguration): NativeMMKV => {
       if (value == null) return undefined;
       return Number(value);
     },
+    getStringWithCallback: (key, callback) => {
+      const res = storage().getItem(key);
+      if (typeof res === 'string') {
+        callback(res);
+      }
+    },
+    getStringAsync: (key) => {
+      const res = storage().getItem(key);
+      if (typeof res === 'string') {
+        return Promise.resolve(res);
+      }
+
+      return Promise.resolve('');
+    },
     getBoolean: (key) => {
       const value = storage().getItem(key);
       if (value == null) return undefined;
