@@ -16,6 +16,12 @@ export const createMockMMKV = (): NativeMMKV => {
       const result = storage.get(key);
       return typeof result === 'number' ? result : undefined;
     },
+    getStringWithCallback: (key, callback) => {
+      console.log(key, callback);
+    },
+    getStringAsync: (key) => {
+      return Promise.resolve('key' + key);
+    },
     getBoolean: (key) => {
       const result = storage.get(key);
       return typeof result === 'boolean' ? result : undefined;
