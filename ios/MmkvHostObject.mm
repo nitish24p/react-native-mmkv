@@ -46,6 +46,8 @@ std::vector<jsi::PropNameID> MmkvHostObject::getPropertyNames(jsi::Runtime& rt)
   result.push_back(jsi::PropNameID::forUtf8(rt, std::string("getBoolean")));
   result.push_back(jsi::PropNameID::forUtf8(rt, std::string("getBuffer")));
   result.push_back(jsi::PropNameID::forUtf8(rt, std::string("getString")));
+    result.push_back(jsi::PropNameID::forUtf8(rt, std::string("getStringWithCallback")));
+    result.push_back(jsi::PropNameID::forUtf8(rt, std::string("getStringAsync")));
   result.push_back(jsi::PropNameID::forUtf8(rt, std::string("getNumber")));
   result.push_back(jsi::PropNameID::forUtf8(rt, std::string("contains")));
   result.push_back(jsi::PropNameID::forUtf8(rt, std::string("delete")));
@@ -154,6 +156,80 @@ jsi::Value MmkvHostObject::get(jsi::Runtime& runtime, const jsi::PropNameID& pro
     });
   }
 
+    if (propName == "getStringWithCallback") {
+          // MMKV.getString(key: string)
+          return jsi::Function::createFromHostFunction(runtime,
+                                                       jsi::PropNameID::forAscii(runtime, funcName),
+                                                       2,  // key
+                                                       [this](jsi::Runtime& runtime,
+                                                              const jsi::Value& thisValue,
+                                                              const jsi::Value* arguments,
+                          
+                                                              size_t count) -> jsi::Value {
+            if (!arguments[0].isString()) {
+              throw jsi::JSError(runtime, "First argument ('key') has to be of type string!");
+            }
+
+              auto userCallbackRef = std::make_shared<jsi::Object>(arguments[1].getObject(runtime));
+              auto keyName = convertJSIStringToNSString(runtime, arguments[0].getString(runtime));
+              dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^(void){
+
+                  auto value = [instance getStringForKey:keyName];
+                  if (value != nil) {
+                      userCallbackRef->asFunction(runtime).call(runtime, convertNSStringToJSIString(runtime, value));
+                    //return convertNSStringToJSIString(runtime, value);
+                  } else {
+                      userCallbackRef->asFunction(runtime).call(runtime, jsi::Value::undefined());
+                    //return jsi::Value::undefined();
+                  }
+              });
+              return jsi::Value::undefined();
+          });
+        }
+    
+    if (propName == "getStringAsync") {
+          // MMKV.getString(key: string)
+          return jsi::Function::createFromHostFunction(runtime,
+                                                       jsi::PropNameID::forAscii(runtime, funcName),
+                                                       1,  // key
+                                                       [this](jsi::Runtime& runtime,
+                                                              const jsi::Value& thisValue,
+                                                              const jsi::Value* arguments,
+                          
+                                                              size_t count) -> jsi::Value {
+              
+                
+              
+            if (!arguments[0].isString()) {
+              throw jsi::JSError(runtime, "First argument ('key') has to be of type string!");
+            }
+
+              auto keyName = convertJSIStringToNSString(runtime, arguments[0].getString(runtime));
+              auto promise = runtime.global().getPropertyAsFunction(runtime, "Promise");
+              return promise.callAsConstructor(runtime, jsi::Function::createFromHostFunction(runtime,
+                        jsi::PropNameID::forAscii(runtime, "executor"),
+                        2,
+                        [this, keyName](jsi::Runtime& runtime,
+                               const jsi::Value& thisValue,
+                               const jsi::Value* args,
+                               size_t count) -> jsi::Value {
+                  
+                  // Execte Promise stuff here
+                  auto resolve = std::make_shared<jsi::Value>(runtime, args[0]);
+                  auto reject = std::make_shared<jsi::Value>(runtime, args[1]);
+                  
+                  auto value = [instance getStringForKey:keyName];
+                  if (value != nil) {
+                      // Resolve promise
+                      resolve->asObject(runtime).asFunction(runtime).call(runtime, convertNSStringToJSIString(runtime, value));
+                  } else {
+                      resolve->asObject(runtime).asFunction(runtime).call(runtime, jsi::Value::undefined());
+                  }
+                  return {};
+              }));
+          });
+        }
+    
   if (propName == "getNumber") {
     // MMKV.getNumber(key: string)
     return jsi::Function::createFromHostFunction(runtime,
